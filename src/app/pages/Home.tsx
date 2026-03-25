@@ -40,6 +40,8 @@ export function Home() {
   const navigate = useNavigate();
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [recipeOfWeek, setRecipeOfWeek] = useState<BackendRecipe | null>(null);
+  const [trendingRecipes, setTrendingRecipes] = useState<BackendRecipe[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
   const [spotlightCook, setSpotlightCook] = useState<SpotlightUser | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
   
@@ -115,6 +117,29 @@ export function Home() {
     };
 
     fetchHighlight();
+  }, []);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        setTrendingLoading(true);
+        // Fetch recipes sorted by rating/created as trending
+        const res = await fetch(
+          "http://localhost:5000/api/recipes?limit=6&sortBy=ratings.average&sortOrder=desc"
+        );
+        const data = await res.json();
+
+        if (res.ok && data?.data?.recipes) {
+          setTrendingRecipes(data.data.recipes);
+        }
+      } catch (err) {
+        console.error("Error loading trending recipes:", err);
+      } finally {
+        setTrendingLoading(false);
+      }
+    };
+
+    fetchTrending();
   }, []);
 
   useEffect(() => {
@@ -314,16 +339,26 @@ export function Home() {
             </div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredRecipes.slice(1).map((recipe, index) => (
-              <motion.div
-                key={recipe.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
-              >
-                <RecipeCard recipe={recipe} />
-              </motion.div>
-            ))}
+            {trendingLoading ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500">Loading trending recipes...</p>
+              </div>
+            ) : trendingRecipes.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500">No trending recipes yet. Be the first to share one!</p>
+              </div>
+            ) : (
+              trendingRecipes.map((recipe, index) => (
+                <motion.div
+                  key={recipe._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
+                >
+                  <RecipeCard recipe={recipe} />
+                </motion.div>
+              ))
+            )}
           </div>
           <div className="text-center mt-8">
             <Link 

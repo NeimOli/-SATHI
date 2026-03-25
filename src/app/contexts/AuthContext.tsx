@@ -49,7 +49,8 @@ interface RegisterData {
     fullName: string;
     phone?: string;
     bio?: string;
-    gender?: string;
+    gender?: string,
+    avatar?: string
   };
 }
 
@@ -61,7 +62,8 @@ interface RestaurantRegisterData {
     fullName: string;
     phone?: string;
     bio?: string;
-    gender?: string;
+    gender?: string,
+    avatar?: string
   };
   restaurant: {
     name: string;

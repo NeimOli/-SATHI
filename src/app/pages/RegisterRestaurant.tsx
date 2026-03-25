@@ -21,6 +21,7 @@ interface RestaurantRegisterFormData {
     phone: string;
     bio: string;
     gender: string;
+    avatar: string;
   };
   restaurant: {
     name: string;
@@ -43,6 +44,7 @@ export function RegisterRestaurant() {
       phone: "",
       bio: "",
       gender: "",
+      avatar: "",
     },
     restaurant: {
       name: "",
@@ -53,6 +55,8 @@ export function RegisterRestaurant() {
       cuisine: [],
     },
   });
+
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -119,6 +123,30 @@ export function RegisterRestaurant() {
       }
     }));
   };
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        setError("Image size should be less than 2MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProfileImage(base64String);
+        setFormData(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            avatar: base64String
+          }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
@@ -175,7 +203,8 @@ export function RegisterRestaurant() {
           fullName: formData.profile.fullName,
           phone: formData.profile.phone,
           bio: formData.profile.bio,
-          gender: formData.profile.gender
+          gender: formData.profile.gender,
+          avatar: formData.profile.avatar
         },
         restaurant: {
           name: restaurantName,
@@ -235,6 +264,24 @@ export function RegisterRestaurant() {
             {/* Personal Information */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+              
+              {/* Profile Image Upload */}
+              <div className="flex flex-col items-center mb-6">
+                <label className="relative group cursor-pointer">
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex items-center justify-center group-hover:opacity-90 transition-opacity">
+                    {profileImage ? (
+                      <img src={profileImage} alt="Profile Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-16 h-16 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="absolute bottom-0 right-0 bg-orange-600 p-2 rounded-full text-white shadow-md hover:bg-orange-700 transition-colors">
+                    <Utensils className="w-4 h-4" />
+                  </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                </label>
+                <p className="text-xs text-gray-500 mt-2">Click photo to upload (Max 2MB)</p>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

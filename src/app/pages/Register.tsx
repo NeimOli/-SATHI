@@ -21,6 +21,7 @@ interface RegisterFormData {
     phone: string;
     bio: string;
     gender: string;
+    avatar: string;
   };
 }
 
@@ -35,8 +36,10 @@ export function Register() {
       phone: "",
       bio: "",
       gender: "",
+      avatar: "",
     },
   });
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
@@ -64,6 +67,30 @@ export function Register() {
       }));
     }
     setError("");
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        setError("Image size should be less than 2MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProfileImage(base64String);
+        setFormData(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            avatar: base64String
+          }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const validateForm = () => {
@@ -112,7 +139,8 @@ export function Register() {
           fullName: formData.profile.fullName,
           phone: formData.profile.phone,
           bio: formData.profile.bio,
-          gender: formData.profile.gender
+          gender: formData.profile.gender,
+          avatar: formData.profile.avatar
         }
       });
       
@@ -173,6 +201,24 @@ export function Register() {
             {/* Personal Information */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+              
+              {/* Profile Image Upload */}
+              <div className="flex flex-col items-center mb-6">
+                <label className="relative group cursor-pointer">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-orange-100 shadow-md flex items-center justify-center group-hover:opacity-90 transition-opacity">
+                    {profileImage ? (
+                      <img src={profileImage} alt="Profile Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-12 h-12 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="absolute bottom-0 right-0 bg-orange-600 p-1.5 rounded-full text-white shadow-md hover:bg-orange-700 transition-colors">
+                    <ChefHat className="w-3.5 h-3.5" />
+                  </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                </label>
+                <p className="text-xs text-gray-500 mt-2">Click photo to upload</p>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

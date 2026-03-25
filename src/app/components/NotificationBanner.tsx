@@ -3,60 +3,61 @@ import { X, Heart, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link } from "react-router";
 
-const notifications = [
-  {
-    id: 1,
-    icon: Heart,
-    color: "from-rose-500 to-pink-500",
-    message: "Sita Sharma just shared a new recipe you'll love!",
-    link: "/recipe/1",
-    linkText: "Check it out"
-  },
-  {
-    id: 2,
-    icon: Star,
-    color: "from-amber-500 to-orange-500",
-    message: "Your saved recipe 'Dal Bhat' is being made by 5 people today!",
-    link: "/recipe/5",
-    linkText: "View recipe"
-  },
-  {
-    id: 3,
-    icon: Heart,
-    color: "from-purple-500 to-pink-500",
-    message: "Ramesh Gurung commented on your recipe!",
-    link: "/recipes",
-    linkText: "See comment"
-  }
-];
+
 
 export function NotificationBanner() {
   const [visible, setVisible] = useState(false);
-  const [currentNotification, setCurrentNotification] = useState(notifications[0]);
+  const [activeNotifications, setActiveNotifications] = useState<any[]>([]);
+  const [currentNotification, setCurrentNotification] = useState<any>(null);
 
   useEffect(() => {
-    // Show notification after 3 seconds
-    const timer = setTimeout(() => {
-      setVisible(true);
-    }, 3000);
+    const fetchLatestActivity = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/recipes?limit=5&sortBy=createdAt&sortOrder=desc");
+        const data = await res.json();
+        
+        if (res.ok && data?.data?.recipes && data.data.recipes.length > 0) {
+          const mapped = data.data.recipes.map((recipe: any, index: number) => ({
+            id: recipe._id,
+            icon: index % 2 === 0 ? Heart : Star,
+            color: index % 3 === 0 ? "from-rose-500 to-pink-500" : 
+                   index % 3 === 1 ? "from-amber-500 to-orange-500" : 
+                   "from-purple-500 to-pink-500",
+            message: `${recipe.author?.profile?.fullName || recipe.author?.username || 'A cook'} just shared a new recipe: ${recipe.title}!`,
+            link: `/recipe/${recipe._id}`,
+            linkText: "Check it out"
+          }));
+          
+          setActiveNotifications(mapped);
+          setCurrentNotification(mapped[0]);
+          
+          // Show notification after 3 seconds
+          setTimeout(() => setVisible(true), 3000);
+        }
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchLatestActivity();
   }, []);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && activeNotifications.length > 1) {
       // Rotate through notifications every 10 seconds
       const interval = setInterval(() => {
-        setCurrentNotification(prev => {
-          const currentIndex = notifications.findIndex(n => n.id === prev.id);
-          const nextIndex = (currentIndex + 1) % notifications.length;
-          return notifications[nextIndex];
+        setCurrentNotification((prev: any) => {
+          const currentIndex = activeNotifications.findIndex(n => n.id === prev.id);
+          const nextIndex = (currentIndex + 1) % activeNotifications.length;
+          return activeNotifications[nextIndex];
         });
       }, 10000);
 
       return () => clearInterval(interval);
     }
-  }, [visible]);
+  }, [visible, activeNotifications]);
+
+  if (!currentNotification) return null;
 
   const Icon = currentNotification.icon;
 

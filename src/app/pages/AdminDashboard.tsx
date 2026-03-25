@@ -19,8 +19,9 @@ export function AdminDashboard() {
   const [pendingChefs, setPendingChefs] = useState<any[]>([]);
   const [verifiedChefs, setVerifiedChefs] = useState<any[]>([]);
   const [pendingPromotions, setPendingPromotions] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pending' | 'verified' | 'promotions'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'verified' | 'promotions' | 'users'>('pending');
 
   useEffect(() => {
     if (!user || user.userType !== 'admin') {
@@ -34,7 +35,7 @@ export function AdminDashboard() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [statsRes, pendingRes, verifiedRes, promotionsRes] = await Promise.all([
+      const [statsRes, pendingRes, verifiedRes, promotionsRes, usersRes] = await Promise.all([
         fetch('http://localhost:5000/api/admin/stats', {
           headers: { Authorization: `Bearer ${token}` }
         }),
@@ -46,6 +47,9 @@ export function AdminDashboard() {
         }),
         fetch('http://localhost:5000/api/admin/promotion-requests', {
           headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch('http://localhost:5000/api/admin/users', {
+          headers: { Authorization: `Bearer ${token}` }
         })
       ]);
 
@@ -53,11 +57,21 @@ export function AdminDashboard() {
       const pendingData = await pendingRes.json();
       const verifiedData = await verifiedRes.json();
       const promotionsData = await promotionsRes.json();
+      const usersData = await usersRes.json();
+
+      console.log('Admin Data Fetched:', {
+        stats: statsData,
+        pending: pendingData,
+        verified: verifiedData,
+        promotions: promotionsData,
+        users: usersData
+      });
 
       if (statsData.success) setStats(statsData.data.stats);
       if (pendingData.success) setPendingChefs(pendingData.data.restaurants);
       if (verifiedData.success) setVerifiedChefs(verifiedData.data.restaurants);
       if (promotionsData.success) setPendingPromotions(promotionsData.data.users);
+      if (usersData.success) setAllUsers(usersData.data.users);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -109,31 +123,38 @@ export function AdminDashboard() {
     }
   };
 
-  const handleDeleteChef = async (id: string) => {
-    const confirmed = window.confirm("Are you absolutely sure you want to delete this chef? This action cannot be undone.");
+  const handleDeleteUser = async (id: string, type: 'user' | 'chef' | 'promotion' = 'user') => {
+    const message = type === 'chef' 
+      ? "Are you absolutely sure you want to delete this chef? This action will also delete all their recipes and events."
+      : "Are you absolutely sure you want to delete this user? This action cannot be undone.";
+      
+    const confirmed = window.confirm(message);
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/restaurants/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       
       if (data.success) {
-        alert("Chef deleted successfully!");
+        alert("Deleted successfully!");
         fetchAdminData();
       } else {
         alert("Deletion failed: " + data.message);
       }
     } catch (error) {
-      console.error('Error deleting chef:', error);
+      console.error('Error deleting user:', error);
     }
   };
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    const confirmed = window.confirm("Are you sure you want to log out?");
+    if (confirmed) {
+      logout();
+      navigate('/login');
+    }
   };
 
   if (!user || user.userType !== 'admin') return null;
@@ -147,9 +168,19 @@ export function AdminDashboard() {
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
             <p className="text-slate-400 mt-1">Manage the platform and verify chefs</p>
           </div>
-          <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={handleLogout}>
-            Log Out
-          </Button>
+          <div className="flex gap-4 items-center">
+            <Button 
+              variant="outline" 
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              onClick={fetchAdminData}
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : 'Refresh Data'}
+            </Button>
+            <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={handleLogout}>
+              Log Out
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -198,19 +229,25 @@ export function AdminDashboard() {
                 onClick={() => setActiveTab('pending')}
                 className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'pending' ? 'bg-amber-100 text-amber-700' : 'text-slate-600 hover:bg-slate-50'}`}
               >
-                Pending ({pendingChefs.length})
+                Chef Requests ({pendingChefs.length})
               </button>
               <button 
                 onClick={() => setActiveTab('verified')}
                 className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`}
               >
-                Verified ({verifiedChefs.length})
+                Verified Chefs ({verifiedChefs.length})
               </button>
               <button 
                 onClick={() => setActiveTab('promotions')}
                 className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'promotions' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
               >
-                Promotions ({pendingPromotions.length})
+                Feature Requests ({pendingPromotions.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('users')}
+                className={`px-4 py-2 text-sm font-semibold transition-colors ${activeTab === 'users' ? 'bg-slate-100 text-slate-700' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                Food Lovers ({allUsers.length})
               </button>
             </div>
           </div>
@@ -229,9 +266,15 @@ export function AdminDashboard() {
               <h3 className="text-lg font-medium text-slate-900">No Pending Requests</h3>
               <p className="text-slate-500">There are no user feature unlock requests at the moment.</p>
             </div>
+          ) : activeTab === 'users' && allUsers.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+              <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-slate-900">No users found</h3>
+              <p className="text-slate-500">There are no regular users registered yet.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(activeTab === 'pending' ? pendingChefs : activeTab === 'verified' ? verifiedChefs : pendingPromotions).map(item => (
+              {(activeTab === 'pending' ? pendingChefs : activeTab === 'verified' ? verifiedChefs : activeTab === 'promotions' ? pendingPromotions : allUsers).map(item => (
                 <div key={item._id} className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col">
                   <div className="p-5 border-b border-slate-100 flex-1">
                     <div className="flex justify-between items-start mb-4">
@@ -247,11 +290,13 @@ export function AdminDashboard() {
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                         activeTab === 'pending' ? 'bg-amber-100 text-amber-700' : 
                         activeTab === 'verified' ? 'bg-emerald-100 text-emerald-700' : 
-                        'bg-blue-100 text-blue-700'
+                        activeTab === 'promotions' ? 'bg-blue-100 text-blue-700' :
+                        'bg-slate-100 text-slate-700'
                       }`}>
                         {activeTab === 'pending' ? 'Pending Verification' : 
                          activeTab === 'verified' ? 'Verified Chef' : 
-                         'Promotion Request'}
+                         activeTab === 'promotions' ? 'Promotion Request' :
+                         'Regular User'}
                       </span>
                     </div>
                     <div className="space-y-2 text-sm text-slate-600">
@@ -259,6 +304,12 @@ export function AdminDashboard() {
                         <>
                           <p><span className="font-semibold text-slate-700">Achievement:</span> {item.promotionMessage}</p>
                           <p><span className="font-semibold text-slate-700">Events Attended:</span> {item.stats?.eventsAttended || 0}</p>
+                        </>
+                      ) : activeTab === 'users' ? (
+                        <>
+                          <p><span className="font-semibold text-slate-700">Recipes Shared:</span> {item.stats?.recipesCount || 0}</p>
+                          <p><span className="font-semibold text-slate-700">Events Attended:</span> {item.stats?.eventsAttended || 0}</p>
+                          <p><span className="font-semibold text-slate-700">Joined:</span> {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</p>
                         </>
                       ) : (
                         <>
@@ -286,13 +337,21 @@ export function AdminDashboard() {
                         <CheckCircle className="w-4 h-4 mr-2" /> Unlock Feature
                       </Button>
                     )}
-                    {activeTab !== 'verified' && (
+                    {activeTab !== 'verified' && activeTab !== 'users' ? (
                       <Button 
                         variant="outline" 
                         className="flex-1 text-red-600 hover:bg-red-50 border-red-200"
-                        onClick={() => handleDeleteChef(item._id)}
+                        onClick={() => handleDeleteUser(item._id, activeTab === 'promotions' ? 'promotion' : 'chef')}
                       >
                         <XCircle className="w-4 h-4 mr-2" /> {activeTab === 'promotions' ? 'Reject' : 'Delete'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 text-red-600 hover:bg-red-50 border-red-200"
+                        onClick={() => handleDeleteUser(item._id, activeTab === 'verified' ? 'chef' : 'user')}
+                      >
+                        <XCircle className="w-4 h-4 mr-2" /> Delete
                       </Button>
                     )}
                   </div>

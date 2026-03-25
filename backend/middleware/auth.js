@@ -22,7 +22,9 @@ export default async (req, res, next) => {
       });
     }
 
-    req.user = decoded;
+    const userObj = user.toObject();
+    userObj.userId = user._id; // Restore for backward compatibility
+    req.user = userObj;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

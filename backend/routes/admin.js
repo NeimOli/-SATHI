@@ -86,30 +86,51 @@ router.get('/restaurants/verified', protect, adminOnly, async (req, res) => {
   }
 });
 
-// @route   DELETE /api/admin/restaurants/:id
-// @desc    Delete a chef/restaurant
+// @route   DELETE /api/admin/users/:id
+// @desc    Delete any user (regular or chef)
 // @access  Private/Admin
-router.delete('/restaurants/:id', protect, adminOnly, async (req, res) => {
+router.delete('/users/:id', protect, adminOnly, async (req, res) => {
   try {
-    // Delete the user
-    // Note: We might want to handle deleting associated recipes and events in a production app via pre('remove') hooks,
-    // but a direct user deletion serves the purpose here.
     const user = await User.findByIdAndDelete(req.params.id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (user.userType !== 'restaurant') {
-      return res.status(400).json({ success: false, message: 'User is not a restaurant/chef' });
+    // Optional: Delete associated recipes/events if needed
+    if (user.userType === 'restaurant') {
+      await Recipe.deleteMany({ author: user._id });
+      await Event.deleteMany({ organizer: user._id });
+    } else {
+      await Recipe.deleteMany({ author: user._id });
     }
 
     res.json({
       success: true,
-      message: 'Chef deleted successfully'
+      message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting chef:', error);
+    console.error('Error deleting user:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @route   GET /api/admin/users
+// @desc    Get all regular users
+// @access  Private/Admin
+router.get('/users', protect, adminOnly, async (req, res) => {
+  try {
+    const users = await User.find({ userType: 'user' })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: users.length,
+      data: { users }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 });

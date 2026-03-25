@@ -14,7 +14,8 @@ const validateRegister = (data) => {
       fullName: Joi.string().min(2).max(100).required(),
       phone: Joi.string().optional(),
       bio: Joi.string().max(500).optional(),
-      gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional()
+      gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional(),
+      avatar: Joi.string().allow('').optional()
     }).required()
   });
   return schema.validate(data);
@@ -68,7 +69,8 @@ router.post('/register', async (req, res) => {
         fullName: profile.fullName,
         phone: profile.phone,
         bio: profile.bio,
-        gender: profile.gender
+        gender: profile.gender,
+        avatar: profile.avatar || ''
       }
     });
 
