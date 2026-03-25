@@ -1,16 +1,19 @@
-import { Link } from "react-router";
-import { ChefHat, Store, Star, Users, TrendingUp, Settings, Award, MapPin, Phone, Globe, Clock, Heart, BookOpen, Utensils, X } from "lucide-react";
+import { ChefHat, Store, Star, Users, TrendingUp, Award, MapPin, Phone, Globe, Clock, Heart, BookOpen, Utensils, X, Edit } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { CreateRecipe } from "./CreateRecipe";
+import { RecipeDetailModal } from "../components/RecipeModal";
+import { AuthorProfileModal } from "../components/AuthorProfileModal";
+import { EditRecipeModal } from "../components/EditRecipeModal";
 
 interface Recipe {
   _id: string;
   title: string;
   description: string;
-  images: string[];
-  cookingTime: number;
+  images: any[]; // Changed to any[] to handle nested objects {url, alt}
+  cookTime: number; // Align with backend
+  prepTime: number; // Align with backend
   difficulty: string;
   category: string;
   likes: number;
@@ -73,6 +76,11 @@ export function ChefDashboard() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<'overview' | 'recipes' | 'analytics' | 'profile'>('overview');
   const [showCreateRecipeModal, setShowCreateRecipeModal] = useState(false);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleLogout = () => {
     const confirmed = window.confirm("Don't go 😢\n\nAre you sure you want to log out?");
@@ -80,6 +88,16 @@ export function ChefDashboard() {
 
     logout();
     window.location.href = "/login";
+  };
+
+  const openRecipeModal = (id: string) => {
+    setSelectedRecipeId(id);
+    setIsRecipeModalOpen(true);
+  };
+
+  const openAuthorModal = (id: string) => {
+    setSelectedAuthorId(id);
+    setIsAuthorModalOpen(true);
   };
 
   useEffect(() => {
@@ -151,7 +169,7 @@ export function ChefDashboard() {
   const statsData = stats ? [
     { label: "Recipes", value: stats.recipesShared.toString(), icon: BookOpen, color: "text-blue-600" },
     { label: "Followers", value: stats.followers.toString(), icon: Users, color: "text-purple-600" },
-    { label: "Rating", value: stats.rating.toFixed(1), icon: Star, color: "text-yellow-600" },
+    { label: "Rating", value: (stats.rating || 0).toFixed(1), icon: Star, color: "text-yellow-600" },
     { label: "Total Likes", value: stats.totalLikes.toString(), icon: Heart, color: "text-red-600" },
   ] : [];
 
@@ -165,10 +183,17 @@ export function ChefDashboard() {
   };
 
   const RecipeCard = ({ recipe }: { recipe: Recipe }) => (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+    <div 
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all overflow-hidden cursor-pointer hover:-translate-y-1"
+      onClick={() => openRecipeModal(recipe._id)}
+    >
       <div className="h-48 bg-gray-200 relative">
         {recipe.images && recipe.images.length > 0 ? (
-          <img src={recipe.images[0]} alt={recipe.title} className="w-full h-full object-cover" />
+          <img 
+            src={recipe.images[0]?.url || recipe.images[0]} 
+            alt={recipe.title} 
+            className="w-full h-full object-cover" 
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
             <Utensils className="w-12 h-12 text-gray-400" />
@@ -181,16 +206,28 @@ export function ChefDashboard() {
         </div>
       </div>
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{recipe.title}</h3>
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-orange-600 transition-colors">{recipe.title}</h3>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedRecipeId(recipe._id);
+              setIsEditModalOpen(true);
+            }}
+            className="p-1 hover:bg-orange-50 rounded text-slate-400 hover:text-orange-600 transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+        </div>
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{recipe.description}</p>
         <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{recipe.cookingTime} mins</span>
+            <span>{recipe.cookTime || (recipe as any).cookingTime || 0} mins</span>
           </div>
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 text-yellow-500 fill-current" />
-            <span>{recipe.rating.toFixed(1)}</span>
+            <span>{(recipe.rating || (recipe as any).ratings?.average || 0).toFixed(1)}</span>
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -269,7 +306,7 @@ export function ChefDashboard() {
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-yellow-500 fill-current" />
                   <span className="text-sm font-medium text-white">
-                    {stats?.rating.toFixed(1) || '0.0'}
+                    {(stats?.rating || 0).toFixed(1)}
                   </span>
                 </div>
               </div>
@@ -387,7 +424,11 @@ export function ChefDashboard() {
                     <div key={recipe._id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg">
                       <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden">
                         {recipe.images && recipe.images.length > 0 ? (
-                          <img src={recipe.images[0]} alt={recipe.title} className="w-full h-full object-cover" />
+                          <img 
+                            src={recipe.images[0]?.url || recipe.images[0]} 
+                            alt={recipe.title} 
+                            className="w-full h-full object-cover" 
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100">
                             <Utensils className="w-6 h-6 text-gray-400" />
@@ -399,7 +440,7 @@ export function ChefDashboard() {
                         <div className="flex items-center gap-3 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            {recipe.rating.toFixed(1)}
+                            {(recipe.rating || (recipe as any).ratings?.average || 0).toFixed(1)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Heart className="w-4 h-4" />
@@ -583,6 +624,31 @@ export function ChefDashboard() {
           </div>
         </div>
       )}
+
+      {/* Recipe Detail Modal */}
+      <RecipeDetailModal 
+        recipeId={selectedRecipeId}
+        isOpen={isRecipeModalOpen}
+        onClose={() => setIsRecipeModalOpen(false)}
+        onAuthorClick={openAuthorModal}
+      />
+
+      {/* Author Profile Modal */}
+      <AuthorProfileModal
+        authorId={selectedAuthorId}
+        isOpen={isAuthorModalOpen}
+        onClose={() => setIsAuthorModalOpen(false)}
+        onRecipeClick={openRecipeModal}
+      />
+
+      <EditRecipeModal
+        recipeId={selectedRecipeId}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          window.location.reload(); // Simple refresh for now
+        }}
+      />
     </div>
   );
 }

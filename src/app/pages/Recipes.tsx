@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { RecipeCard } from "../components/RecipeCard";
+import { RecipeDetailModal } from "../components/RecipeModal";
+import { AuthorProfileModal } from "../components/AuthorProfileModal";
 import { Search, Filter, Loader2 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -20,6 +22,10 @@ export function Recipes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -58,6 +64,16 @@ export function Recipes() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchRecipes();
+  };
+
+  const openRecipeModal = (id: string) => {
+    setSelectedRecipeId(id);
+    setIsRecipeModalOpen(true);
+  };
+
+  const openAuthorModal = (id: string) => {
+    setSelectedAuthorId(id);
+    setIsAuthorModalOpen(true);
   };
 
   // Map backend recipe to MockRecipe format for RecipeCard compatibility
@@ -181,7 +197,11 @@ export function Recipes() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
               >
-                <RecipeCard recipe={mapToMockFormat(recipe)} />
+                <RecipeCard 
+                  recipe={mapToMockFormat(recipe)} 
+                  onCardClick={openRecipeModal} 
+                  onAuthorClick={openAuthorModal}
+                />
               </motion.div>
             ))}
           </div>
@@ -207,6 +227,22 @@ export function Recipes() {
           </div>
         )}
       </motion.div>
+
+      {/* Recipe Detail Modal */}
+      <RecipeDetailModal 
+        recipeId={selectedRecipeId}
+        isOpen={isRecipeModalOpen}
+        onClose={() => setIsRecipeModalOpen(false)}
+        onAuthorClick={openAuthorModal}
+      />
+
+      {/* Author Profile Modal */}
+      <AuthorProfileModal
+        authorId={selectedAuthorId}
+        isOpen={isAuthorModalOpen}
+        onClose={() => setIsAuthorModalOpen(false)}
+        onRecipeClick={openRecipeModal}
+      />
     </div>
   );
 }

@@ -18,11 +18,11 @@ import { Badge } from "../components/ui/badge";
 import { Avatar } from "../components/ui/avatar";
 import { toast } from "sonner";
 import { motion } from "motion/react";
-import { Recipe as MockRecipe } from "../data/mockData";
+// import { Recipe as MockRecipe } from "../data/mockData";
 
 export function RecipeDetail() {
   const { id } = useParams();
-  const [recipe, setRecipe] = useState<MockRecipe | null>(null);
+  const [recipe, setRecipe] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [liked, setLiked] = useState(false);
@@ -40,11 +40,12 @@ export function RecipeDetail() {
         if (data.status === 'success') {
           const backendRecipe = data.data.recipe;
           // Map to mock format for UI compatibility
-          const mappedRecipe: MockRecipe = {
+          const mappedRecipe: any = { // Using any to allow additional fields
             id: backendRecipe._id,
             title: backendRecipe.title,
             description: backendRecipe.description,
             image: backendRecipe.images?.[0]?.url || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800",
+            images: backendRecipe.images || [], // Full images array
             cookId: backendRecipe.author?._id || "",
             cookName: backendRecipe.author?.profile?.fullName || backendRecipe.author?.username || "Chef",
             cookAvatar: backendRecipe.author?.profile?.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100",
@@ -52,10 +53,13 @@ export function RecipeDetail() {
             cookTime: `${backendRecipe.cookTime} min`,
             servings: backendRecipe.servings,
             difficulty: backendRecipe.difficulty?.charAt(0).toUpperCase() + backendRecipe.difficulty?.slice(1) || 'Medium',
+            category: backendRecipe.category,
+            cuisine: backendRecipe.cuisine,
+            nutrition: backendRecipe.nutrition || {},
             ingredients: backendRecipe.ingredients?.map((i: any) => `${i.quantity} ${i.unit || ''} ${i.name}`) || [],
-            instructions: backendRecipe.instructions?.map((i: any) => i.instruction) || [],
+            instructions: backendRecipe.instructions?.sort((a: any, b: any) => (a.step || 0) - (b.step || 0)).map((i: any) => i.instruction) || [],
             tags: backendRecipe.tags || [],
-            likes: backendRecipe.likes || 0,
+            likes: backendRecipe.ratings?.count || backendRecipe.likes || 0,
             saves: backendRecipe.saves || 0,
             comments: backendRecipe.reviews || [],
             createdAt: backendRecipe.createdAt
@@ -152,9 +156,15 @@ export function RecipeDetail() {
             >
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{recipe.title}</h1>
               <div className="flex flex-wrap items-center gap-4">
-                {recipe.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-white/30">
-                    {tag}
+                <Badge variant="secondary" className="bg-orange-500 text-white border-none px-3 py-1">
+                  {recipe.category}
+                </Badge>
+                <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-white/30 px-3 py-1">
+                  {recipe.cuisine} Cuisine
+                </Badge>
+                {recipe.tags.map((tag: string) => (
+                  <Badge key={tag} variant="secondary" className="bg-white/10 backdrop-blur-sm text-white border-white/20">
+                    #{tag}
                   </Badge>
                 ))}
               </div>
@@ -174,8 +184,41 @@ export function RecipeDetail() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="bg-white rounded-xl shadow-md p-6 border border-gray-100"
             >
+              <h2 className="text-xl font-bold text-gray-900 mb-3">About this recipe</h2>
               <p className="text-gray-700 text-lg leading-relaxed">{recipe.description}</p>
             </motion.div>
+
+            {/* Nutrition Facts */}
+            {recipe.nutrition && (recipe.nutrition.calories || recipe.nutrition.protein) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="bg-white rounded-xl shadow-md p-6 border border-gray-100"
+              >
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="text-xl">🥗</span> Nutrition Facts (per serving)
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-50 p-3 rounded-lg text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Calories</p>
+                    <p className="text-xl font-bold text-slate-900">{recipe.nutrition.calories || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Protein</p>
+                    <p className="text-xl font-bold text-slate-900">{recipe.nutrition.protein}g</p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Carbs</p>
+                    <p className="text-xl font-bold text-slate-900">{recipe.nutrition.carbs}g</p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Fat</p>
+                    <p className="text-xl font-bold text-slate-900">{recipe.nutrition.fat}g</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Recipe Info */}
             <motion.div
@@ -236,7 +279,7 @@ export function RecipeDetail() {
                 Ingredients
               </h2>
               <ul className="space-y-3">
-                {recipe.ingredients.map((ingredient, index) => (
+                {recipe.ingredients.map((ingredient: string, index: number) => (
                   <li key={index} className="flex items-start gap-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-sm font-semibold mt-0.5">
                       {index + 1}
@@ -259,7 +302,7 @@ export function RecipeDetail() {
                 Instructions
               </h2>
               <ol className="space-y-4">
-                {recipe.instructions.map((instruction, index) => (
+                {recipe.instructions.map((instruction: string, index: number) => (
                   <li key={index} className="flex items-start gap-4">
                     <span className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center text-white font-bold">
                       {index + 1}
@@ -269,6 +312,27 @@ export function RecipeDetail() {
                 ))}
               </ol>
             </motion.div>
+
+            {/* Image Gallery */}
+            {recipe.images && recipe.images.length > 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.45 }}
+                className="bg-white rounded-xl shadow-md p-6 border border-gray-100"
+              >
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="text-xl">📸</span> Photo Gallery
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {recipe.images.map((img: any, idx: number) => (
+                    <div key={idx} className="aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <img src={img.url || img} alt={`Recipe step ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             {/* Comments Section */}
             <motion.div

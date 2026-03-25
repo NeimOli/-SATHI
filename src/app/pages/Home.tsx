@@ -4,6 +4,8 @@ import { RecipeCard } from "../components/RecipeCard";
 import { CookSpotlight } from "../components/CookSpotlight";
 import { NotificationBanner } from "../components/NotificationBanner";
 import { RoleSelectorModal } from "../components/RoleSelectorModal";
+import { RecipeDetailModal } from "../components/RecipeModal";
+import { AuthorProfileModal } from "../components/AuthorProfileModal";
 import { Heart, TrendingUp, Award, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -44,6 +46,10 @@ export function Home() {
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [spotlightCook, setSpotlightCook] = useState<SpotlightUser | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   
   // Home page is now accessible to all users
   // Users can navigate to dashboards using the navigation
@@ -183,6 +189,16 @@ export function Home() {
     }
   };
 
+  const openRecipeModal = (id: string) => {
+    setSelectedRecipeId(id);
+    setIsRecipeModalOpen(true);
+  };
+
+  const openAuthorModal = (id: string) => {
+    setSelectedAuthorId(id);
+    setIsAuthorModalOpen(true);
+  };
+
   return (
     <div className="pb-24 md:pb-8">
       <NotificationBanner />
@@ -291,12 +307,12 @@ export function Home() {
                       </span>
                     </div>
                   </div>
-                  <Link 
-                    to={`/recipe/${recipeOfWeek._id}`}
-                    className="inline-block bg-gradient-to-r from-orange-500 to-amber-600 text-white px-8 py-3 rounded-full font-semibold hover:from-orange-600 hover:to-amber-700 transition-all shadow-lg"
+                  <button 
+                    onClick={() => openRecipeModal(recipeOfWeek._id)}
+                    className="inline-block bg-gradient-to-r from-orange-500 to-amber-600 text-white px-8 py-3 rounded-full font-semibold hover:from-orange-600 hover:to-amber-700 transition-all shadow-lg text-center"
                   >
                     View Full Recipe
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
@@ -355,7 +371,11 @@ export function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
                 >
-                  <RecipeCard recipe={recipe} />
+                  <RecipeCard 
+                    recipe={recipe} 
+                    onCardClick={openRecipeModal} 
+                    onAuthorClick={openAuthorModal}
+                  />
                 </motion.div>
               ))
             )}
@@ -413,6 +433,22 @@ export function Home() {
         isOpen={showRoleSelector}
         onClose={() => setShowRoleSelector(false)}
         onRoleSelect={handleRoleSelect}
+      />
+
+      {/* Recipe Detail Modal */}
+      <RecipeDetailModal 
+        recipeId={selectedRecipeId}
+        isOpen={isRecipeModalOpen}
+        onClose={() => setIsRecipeModalOpen(false)}
+        onAuthorClick={openAuthorModal}
+      />
+
+      {/* Author Profile Modal */}
+      <AuthorProfileModal
+        authorId={selectedAuthorId}
+        isOpen={isAuthorModalOpen}
+        onClose={() => setIsAuthorModalOpen(false)}
+        onRecipeClick={openRecipeModal}
       />
     </div>
   );

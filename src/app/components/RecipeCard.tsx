@@ -1,15 +1,31 @@
 import { Link } from "react-router";
-import { Recipe } from "../data/mockData";
+// import { Recipe } from "../data/mockData";
 import { Heart, Bookmark, Clock, Users } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { motion } from "motion/react";
 
 interface RecipeCardProps {
   recipe: any; // Using any to handle both mock and backend structures flexibly
+  onCardClick?: (id: string) => void;
+  onAuthorClick?: (id: string) => void;
 }
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({ recipe, onCardClick, onAuthorClick }: RecipeCardProps) {
   const id = recipe._id || recipe.id;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (onCardClick) {
+      e.preventDefault();
+      onCardClick(id);
+    }
+  };
+
+  const handleAuthorClick = (e: React.MouseEvent) => {
+    if (onAuthorClick) {
+      e.preventDefault();
+      onAuthorClick(cookId);
+    }
+  };
   const image = recipe.images?.[0]?.url || recipe.image;
   const title = recipe.title;
   const description = recipe.description;
@@ -29,7 +45,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       transition={{ duration: 0.2 }}
       className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow overflow-hidden border border-gray-100 h-full flex flex-col"
     >
-      <Link to={`/recipe/${id}`}>
+      <Link to={`/recipe/${id}`} onClick={handleCardClick}>
         <div className="relative overflow-hidden">
           <img 
             src={image || 'https://via.placeholder.com/400x300?text=Recipe+Image'} 
@@ -44,7 +60,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       
       <div className="p-5 space-y-4 flex-1 flex flex-col">
         <div className="flex-1">
-          <Link to={`/recipe/${id}`}>
+          <Link to={`/recipe/${id}`} onClick={handleCardClick}>
             <h3 className="font-bold text-lg text-gray-900 hover:text-orange-600 transition-colors line-clamp-2">
               {title}
             </h3>
@@ -76,6 +92,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
           <Link 
             to={`/profile/${cookId}`}
+            onClick={handleAuthorClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img 
